@@ -288,7 +288,7 @@
         else if (isSturmPause) { status.innerText = "Rupture!"; pC = "phase-sturm"; pN = "s"; }
         else if (timeLeft > cL) { status.innerHTML = "ABKÜHLUNG<br>FARMEN!"; pC = "phase-cool"; pN = "c"; }
         else if (timeLeft > rL) { status.innerHTML = "ENDE DER<br>REGENERATION"; pC = "phase-regen"; pN = "r"; }
-        else if (timeLeft > wL) { status.innerHTML = "SICHERES<br>ZEITFENSTER"; pC = "phase-safe"; pN = "sa"; }
+        else if (timeLeft > wL) { status.innerHTML = "SICHER ?"; pC = "phase-safe"; pN = "sa"; }
         else if (timeLeft > dL) { status.innerHTML = "WARNUNG<br>RÜCKZUG!"; pC = "phase-warn"; pN = "w"; }
         else { status.innerHTML = "GEFAHR<br>SCHUTZ SUCHEN!"; pC = "phase-danger"; pN = "d"; }
 
