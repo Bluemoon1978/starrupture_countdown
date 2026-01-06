@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>StarRupture Countdown v1</title>
+    <style>
+        body { 
+            background: #0f172a; 
+            color: #f8fafc; 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: flex-start; 
+            min-height: 100vh; 
+            margin: 0; 
+            padding-top: 20px; 
+        }
+        .card { background: #1e293b; padding: 20px; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.7); text-align: center; border: 1px solid #334155; width: 520px; }
+        .frame { background: #161e2e; border-radius: 15px; padding: 20px; margin-bottom: 15px; border: 2px solid #2d3748; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.3s ease; position: relative; overflow: hidden; }
+        .status-frame { min-height: 100px; }
+        .status { font-size: 2.8rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.1; z-index: 2; }
+
+        .compact-row { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-around; 
+            background: #161e2e; 
+            padding: 15px 10px; 
+            border-radius: 15px; 
+            border: 2px solid #2d3748; 
+            margin-bottom: 15px;
+            transition: border-color 0.3s ease;
+        }
+
+        .info-box { display: flex; flex-direction: column; align-items: center; flex: 1; }
+        .info-label { font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; font-weight: 800; margin-bottom: 2px; letter-spacing: 0.05em; }
+        .info-value { font-size: 1.8rem; font-weight: bold; font-variant-numeric: tabular-nums; color: #f8fafc; }
+        .timer-value { font-size: 2.2rem; }
+        .divider { width: 1px; height: 35px; background: #334155; opacity: 0.6; }
+
+        .controls-frame { display: flex; gap: 10px; flex-direction: row !important; padding: 15px; }
+        button { border: none; padding: 12px 5px; font-size: 0.85rem; font-weight: bold; border-radius: 10px; cursor: pointer; transition: 0.2s; flex: 1; text-transform: uppercase; color: #ffffff; }
+        .btn-next { background: #818cf8; }
+        .btn-start { background: #38bdf8; }
+        .btn-pause { background: #94a3b8; color: #1e293b; }
+        .btn-reset { background: #ef4444; font-size: 0.7rem; padding: 8px; margin-top: 10px; width: 100%; }
+
+        .settings-toggle { background: #334155; color: #cbd5e1; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; display: flex; justify-content: space-between; width: 100%; box-sizing: border-box; }
+        .settings-content { display: none; padding-top: 15px; grid-template-columns: 1fr 1fr; gap: 12px; text-align: left; }
+        .settings-content.open { display: grid; }
+        .setting-group { display: flex; flex-direction: column; }
+        .full-width { grid-column: span 2; }
+        .settings-frame label { margin-bottom: 5px; color: #94a3b8; font-size: 0.75rem; font-weight: bold; }
+        .settings-frame input { background: #0f172a; border: 1px solid #334155; color: white; padding: 8px; border-radius: 6px; text-align: center; font-size: 1rem; }
+        .checkbox-group { grid-column: span 2; display: flex; flex-wrap: wrap; gap: 10px; background: #0f172a; padding: 10px; border-radius: 8px; justify-content: center; border: 1px solid #334155; }
+
+        .phase-cool { color: #4ade80 !important; border-color: #4ade80 !important; }
+        .phase-regen { color: #a855f7 !important; border-color: #a855f7 !important; }
+        .phase-safe { color: #38bdf8 !important; border-color: #38bdf8 !important; }
+        .phase-warn { color: #fbbf24 !important; border-color: #fbbf24 !important; }
+        .phase-danger { color: #f43f5e !important; border-color: #f43f5e !important; }
+        .phase-sturm { color: #f43f5e !important; border-color: #f43f5e !important; animation: blink 0.8s infinite; }
+        
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .hidden { display: none !important; }
+        .flash-active { animation: flash-white 0.5s ease-out; }
+        @keyframes flash-white { 0% { background-color: rgba(255, 255, 255, 0.15); } 100% { background-color: transparent; } }
+    </style>
+</head>
+<body onload="loadSession()">
+
+<div class="card">
+    <div id="frame-status" class="frame status-frame">
+        <div id="status-text" class="status">BEREIT</div>
+    </div>
+    
+    <div id="main-compact-bar" class="compact-row">
+        <div id="wrap-timer" class="info-box">
+            <div class="info-label">Countdown</div>
+            <div id="timer" class="info-value timer-value">00:00</div>
+        </div>
+        <div id="div-1" class="divider"></div>
+        <div id="wrap-total" class="info-box">
+            <div class="info-label">Gesamt</div>
+            <div id="total-runtime" class="info-value">00:00</div>
+        </div>
+        <div id="div-2" class="divider"></div>
+        <div id="wrap-cycle" class="info-box">
+            <div class="info-label">Zyklus</div>
+            <div id="cycle-count" class="info-value">0</div>
+        </div>
+    </div>
+    
+    <div class="frame controls-frame">
+        <button class="btn-next" onclick="nextCycle()">Nächster Zyklus</button>
+        <button class="btn-start" onclick="initiateCycle()">Neustart</button>
+        <button id="pause-btn" class="btn-pause" onclick="togglePause()">Pause</button>
+    </div>
+
+    <div class="frame" style="padding: 10px;">
+        <div class="settings-toggle" onclick="toggleSettings()">
+            <span>KONFIGURATION</span>
+            <span id="arrow">▼</span>
+        </div>
+        
+        <div id="settings-area" class="settings-content settings-frame">
+            <div id="settings-info-display" class="compact-row" style="grid-column: span 2; background: #0f172a; margin-bottom: 15px;">
+                <div id="alt-timer-wrap" class="info-box"><div class="info-label">Countdown</div><div id="timer-alt" class="info-value">00:00</div></div>
+                <div id="alt-divider-1" class="divider"></div>
+                <div id="alt-total-wrap" class="info-box"><div class="info-label">Gesamt</div><div id="total-runtime-alt" class="info-value">00:00</div></div>
+                <div id="alt-divider-2" class="divider"></div>
+                <div id="alt-cycle-wrap" class="info-box"><div class="info-label">Zyklus</div><div id="cycle-count-alt" class="info-value">0</div></div>
+            </div>
+
+            <div class="setting-group full-width"><label>Gesamtzyklus:</label><input type="text" id="t-total" value="53:14" oninput="saveSession()"></div>
+            <div class="setting-group"><label>Abkühlphase:</label><input type="text" id="t-cool" value="09:30" oninput="saveSession()"></div>
+            <div class="setting-group"><label>Regeneration Ende:</label><input type="text" id="t-regen" value="11:30" oninput="saveSession()"></div>
+            <div class="setting-group"><label>Warnung ab:</label><input type="text" id="t-warn" value="10:00" oninput="saveSession()"></div>
+            <div class="setting-group"><label>Gefahr ab:</label><input type="text" id="t-danger" value="05:00" oninput="saveSession()"></div>
+            <div class="setting-group full-width"><label>Rupture Dauer:</label><input type="text" id="t-rupture" value="00:59" oninput="saveSession()"></div>
+            
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="hide-timer" onchange="updateDisplay(); saveSession();"> Zeit ausblenden</label>
+                <label><input type="checkbox" id="only-minutes" onchange="updateDisplay(); saveSession();"> Nur Min</label>
+                <label><input type="checkbox" id="hide-info" onchange="updateDisplay(); saveSession();"> Info ausblenden</label>
+                <button class="btn-reset" onclick="resetSession()">Daten-Reset</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let timeLeft = null, timerId = null, isPaused = false, isSturmPause = false;
+    let totalSeconds = 0, currentCycle = 0, currentPhaseName = "";
+
+    function toggleSettings() {
+        const area = document.getElementById('settings-area');
+        const arrow = document.getElementById('arrow');
+        area.classList.toggle('open');
+        arrow.style.transform = area.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
+
+    function parseTimeToSeconds(input) {
+        if (!input) return 0;
+        const str = input.toString().trim();
+        if (str.includes(':')) {
+            const parts = str.split(':');
+            return (Math.max(0, parseInt(parts[0]) || 0) * 60) + Math.max(0, parseInt(parts[1]) || 0);
+        }
+        return Math.max(0, parseInt(str) || 0) * 60;
+    }
+
+    function formatTime(seconds, forceFull = false) {
+        if (seconds === null || isNaN(seconds)) return "00:00";
+        const onlyMins = document.getElementById('only-minutes').checked;
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        if (onlyMins && !forceFull) return `${mins}`;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function saveSession() {
+        const data = { 
+            timeLeft, totalSeconds, currentCycle, isSturmPause, isPaused, 
+            hideTimer: document.getElementById('hide-timer').checked,
+            onlyMinutes: document.getElementById('only-minutes').checked,
+            hideInfo: document.getElementById('hide-info').checked,
+            confTotal: document.getElementById('t-total').value,
+            confCool: document.getElementById('t-cool').value,
+            confRegen: document.getElementById('t-regen').value,
+            confWarn: document.getElementById('t-warn').value,
+            confDanger: document.getElementById('t-danger').value,
+            confRupture: document.getElementById('t-rupture').value,
+            timestamp: Date.now() 
+        };
+        localStorage.setItem('starRupture_session', JSON.stringify(data));
+    }
+
+    function loadSession() {
+        const saved = localStorage.getItem('starRupture_session');
+        if (saved) {
+            const data = JSON.parse(saved);
+            if (data.confTotal) document.getElementById('t-total').value = data.confTotal;
+            if (data.confCool) document.getElementById('t-cool').value = data.confCool;
+            if (data.confRegen) document.getElementById('t-regen').value = data.confRegen;
+            if (data.confWarn) document.getElementById('t-warn').value = data.confWarn;
+            if (data.confDanger) document.getElementById('t-danger').value = data.confDanger;
+            if (data.confRupture) document.getElementById('t-rupture').value = data.confRupture;
+            if (data.hideTimer !== undefined) document.getElementById('hide-timer').checked = data.hideTimer;
+            if (data.onlyMinutes !== undefined) document.getElementById('only-minutes').checked = data.onlyMinutes;
+            if (data.hideInfo !== undefined) document.getElementById('hide-info').checked = data.hideInfo;
+            
+            if (Date.now() - data.timestamp < 7200000) {
+                timeLeft = data.timeLeft; totalSeconds = data.totalSeconds; 
+                currentCycle = data.currentCycle; isSturmPause = data.isSturmPause; 
+                isPaused = data.isPaused;
+                if (timeLeft !== null) { updateDisplay(); startTick(); return; }
+            }
+        }
+        updateDisplay();
+        document.getElementById('settings-area').classList.add('open');
+    }
+
+    function resetSession() {
+        if (confirm("Wirklich alle Daten und Einstellungen löschen?")) {
+            if (timerId) clearInterval(timerId);
+            localStorage.removeItem('starRupture_session');
+            location.reload();
+        }
+    }
+
+    function initiateCycle() {
+        if (timerId) clearInterval(timerId);
+        isPaused = false; isSturmPause = false; totalSeconds = 0; currentCycle = 1;
+        timeLeft = parseTimeToSeconds(document.getElementById('t-total').value);
+        updateDisplay(); startTick();
+    }
+
+    function nextCycle() {
+        isSturmPause = false; currentCycle++;
+        timeLeft = parseTimeToSeconds(document.getElementById('t-total').value);
+        if (!timerId) startTick();
+        updateDisplay(); saveSession();
+    }
+
+    function startTick() {
+        if (timerId) clearInterval(timerId);
+        timerId = setInterval(() => {
+            if (!isPaused && timeLeft !== null) {
+                timeLeft--; totalSeconds++;
+                if (timeLeft < 0) {
+                    if (!isSturmPause) { isSturmPause = true; timeLeft = parseTimeToSeconds(document.getElementById('t-rupture').value); }
+                    else { isSturmPause = false; currentCycle++; timeLeft = parseTimeToSeconds(document.getElementById('t-total').value); }
+                }
+                updateDisplay(); saveSession();
+            }
+        }, 1000);
+    }
+
+    function togglePause() {
+        if (timeLeft === null) return;
+        isPaused = !isPaused;
+        document.getElementById('pause-btn').innerText = isPaused ? "Weiter" : "Pause";
+        updateDisplay();
+    }
+
+    function updateDisplay() {
+        const hTimer = document.getElementById('hide-timer').checked;
+        const hInfo = document.getElementById('hide-info').checked;
+        
+        document.getElementById('wrap-timer').classList.toggle('hidden', hTimer);
+        document.getElementById('wrap-total').classList.toggle('hidden', hInfo);
+        document.getElementById('wrap-cycle').classList.toggle('hidden', hInfo);
+        document.getElementById('div-1').classList.toggle('hidden', hTimer || hInfo);
+        document.getElementById('div-2').classList.toggle('hidden', hInfo);
+        document.getElementById('main-compact-bar').classList.toggle('hidden', hTimer && hInfo);
+
+        document.getElementById('alt-timer-wrap').classList.toggle('hidden', !hTimer);
+        document.getElementById('alt-total-wrap').classList.toggle('hidden', !hInfo);
+        document.getElementById('alt-cycle-wrap').classList.toggle('hidden', !hInfo);
+        document.getElementById('alt-divider-1').classList.toggle('hidden', !hTimer || !hInfo);
+        document.getElementById('alt-divider-2').classList.toggle('hidden', !hInfo);
+        document.getElementById('settings-info-display').classList.toggle('hidden', !hTimer && !hInfo);
+
+        if (timeLeft === null) return;
+        const timeS = formatTime(totalSeconds, true);
+        const timerS = formatTime(timeLeft);
+        
+        document.getElementById('total-runtime').innerText = timeS;
+        document.getElementById('total-runtime-alt').innerText = timeS;
+        document.getElementById('cycle-count').innerText = currentCycle;
+        document.getElementById('cycle-count-alt').innerText = currentCycle;
+        document.getElementById('timer').innerText = timerS;
+        document.getElementById('timer-alt').innerText = timerS;
+
+        const status = document.getElementById('status-text');
+        const fS = document.getElementById('frame-status');
+        const bar = document.getElementById('main-compact-bar');
+        const barAlt = document.getElementById('settings-info-display');
+        const total = parseTimeToSeconds(document.getElementById('t-total').value);
+        const cL = total - parseTimeToSeconds(document.getElementById('t-cool').value);
+        const rL = total - parseTimeToSeconds(document.getElementById('t-regen').value);
+        const wL = parseTimeToSeconds(document.getElementById('t-warn').value);
+        const dL = parseTimeToSeconds(document.getElementById('t-danger').value);
+
+        let pC = "", pN = "";
+        if (isPaused) { status.innerText = "PAUSIERT"; }
+        else if (isSturmPause) { status.innerText = "Rupture!"; pC = "phase-sturm"; pN = "s"; }
+        else if (timeLeft > cL) { status.innerHTML = "ABKÜHLUNG<br>FARMEN!"; pC = "phase-cool"; pN = "c"; }
+        else if (timeLeft > rL) { status.innerHTML = "ENDE DER<br>REGENERATION"; pC = "phase-regen"; pN = "r"; }
+        else if (timeLeft > wL) { status.innerHTML = "SICHERES<br>ZEITFENSTER"; pC = "phase-safe"; pN = "sa"; }
+        else if (timeLeft > dL) { status.innerHTML = "WARNUNG<br>RÜCKZUG!"; pC = "phase-warn"; pN = "w"; }
+        else { status.innerHTML = "GEFAHR<br>SCHUTZ SUCHEN!"; pC = "phase-danger"; pN = "d"; }
+
+        if (pN !== currentPhaseName && currentPhaseName !== "") {
+            fS.classList.remove('flash-active'); void fS.offsetWidth; fS.classList.add('flash-active');
+        }
+        currentPhaseName = pN;
+        fS.className = "frame status-frame " + pC;
+        const currentColor = window.getComputedStyle(status).color;
+        document.getElementById('timer').style.color = currentColor;
+        document.getElementById('timer-alt').style.color = currentColor;
+        bar.style.borderColor = currentColor;
+        barAlt.style.borderColor = currentColor;
+    }
+</script>
+</body>
+</html>
